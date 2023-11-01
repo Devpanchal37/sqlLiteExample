@@ -34,24 +34,24 @@ class _HomePageState extends State<HomePage> {
   //   _refreshJournals();
   // }
 
-  // List<Map<String, dynamic>> _journals = [];
-  // bool _isLoading = true;
-  //
-  // void _refreshJournals() async {
-  //   final data = await SQLHelper.getItems();
-  //   setState(() {
-  //     _journals = data;
-  //     _isLoading = false;
-  //   });
-  // }
-  //
-  // @override
-  // void initState() {
-  //   // TODO: implement initState
-  //   super.initState();
-  //   _refreshJournals();
-  //   print(".. number of items ${_journals.length}");
-  // }
+  List<Map<String, dynamic>> _journals = [];
+  bool _isLoading = true;
+
+  void _refreshJournals() async {
+    final data = await SQLHelper.getItems();
+    setState(() {
+      _journals = data;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshJournals();
+    print(".. number of items ${_journals.length}");
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,7 +98,9 @@ class AddStudent extends StatefulWidget {
 
 class _AddStudentState extends State<AddStudent> {
   final TextEditingController _studentNameController = TextEditingController();
-  final TextEditingController _studentDescriptionController =
+  final TextEditingController _studentAddressController =
+      TextEditingController();
+  final TextEditingController _studentEnrollmentController =
       TextEditingController();
 
   @override
@@ -123,22 +125,23 @@ class _AddStudentState extends State<AddStudent> {
       final existingJournal =
           await _journals.firstWhere((element) => element['id'] == id);
       print("heeeeellllllo");
-      _studentNameController.text = existingJournal['title'];
-      _studentDescriptionController.text = existingJournal['description'];
+      _studentNameController.text = existingJournal['name'];
+      _studentAddressController.text = existingJournal['address'];
+      _studentEnrollmentController.text = existingJournal['enrollment'];
     }
     setState(() {});
   }
 
   Future<void> _updateItem(int id) async {
-    await SQLHelper.updateItem(
-        id, _studentNameController.text, _studentDescriptionController.text);
+    await SQLHelper.updateItem(id, _studentNameController.text,
+        _studentAddressController.text, _studentEnrollmentController.text);
     _refreshJournals();
   }
 
   Future<void> _addItem() async {
     print("add item");
-    await SQLHelper.createItem(
-        _studentNameController.text, _studentDescriptionController.text);
+    await SQLHelper.createItem(_studentNameController.text,
+        _studentAddressController.text, _studentEnrollmentController.text);
     print("after add item");
     _refreshJournals();
     print("numberrrrr of itemss : ${_journals.length}");
@@ -159,38 +162,49 @@ class _AddStudentState extends State<AddStudent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("ADD Student"),
+        title: Text((widget.id == null) ? "Add Student" : "Edit Student"),
       ),
-      body: Center(
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _studentNameController,
-              decoration: const InputDecoration(hintText: "student name"),
-            ),
-            TextFormField(
-              controller: _studentDescriptionController,
-              decoration: const InputDecoration(hintText: "student name"),
-            ),
-            ElevatedButton(
-                onPressed: () {
-                  if (widget.id == null) {
-                    _addItem();
-                  } else {
-                    _updateItem(widget.id!);
-                  }
-                  // _submitForm(widget.id);
-                  Navigator.pop(context);
-                },
-                child: const Text("Save")),
-            // ElevatedButton(
-            //     onPressed: () {
-            //       // _submitForm(widget.id);
-            //       // Navigator.pop(context);
-            //       _chechForEdit(widget.id);
-            //     },
-            //     child: const Text("show")),
-          ],
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _studentNameController,
+                decoration: const InputDecoration(hintText: "Student Name"),
+              ),
+              TextFormField(
+                controller: _studentEnrollmentController,
+                decoration: const InputDecoration(hintText: "Roll No."),
+              ),
+              TextFormField(
+                controller: _studentAddressController,
+                decoration: const InputDecoration(hintText: "Address"),
+              ),
+
+              Container(
+                width: 200,
+                child: ElevatedButton(
+                    onPressed: () {
+                      if (widget.id == null) {
+                        _addItem();
+                      } else {
+                        _updateItem(widget.id!);
+                      }
+                      // _submitForm(widget.id);
+                      Navigator.pop(context);
+                    },
+                    child: const Text("Save Student Data")),
+              ),
+              // ElevatedButton(
+              //     onPressed: () {
+              //       // _submitForm(widget.id);
+              //       // Navigator.pop(context);
+              //       _chechForEdit(widget.id);
+              //     },
+              //     child: const Text("show")),
+            ],
+          ),
         ),
       ),
     );
@@ -236,7 +250,7 @@ class _ShowListOfStudentState extends State<ShowListOfStudent> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("List of student"),
+        title: Text("List of students"),
       ),
       body: ListView.builder(
         shrinkWrap: true,
@@ -246,8 +260,15 @@ class _ShowListOfStudentState extends State<ShowListOfStudent> {
           print(_journals.length);
           return Card(
             child: ListTile(
-              title: Text(_journals[index]['title'] ?? "no data"),
-              subtitle: Text(_journals[index]['description'] ?? "no data"),
+              leading: const Icon(Icons.people),
+              title: Text(_journals[index]['name'] ?? "no data"),
+              subtitle: Row(
+                children: [
+                  Text(
+                      "Roll No:${_journals[index]['enrollment']}" ?? "no data"),
+                  Text("Add: ${_journals[index]['address']}" ?? "no data")
+                ],
+              ),
               trailing: SizedBox(
                 width: 100,
                 child: Row(
@@ -267,7 +288,10 @@ class _ShowListOfStudentState extends State<ShowListOfStudent> {
                           _deleteItem(_journals[index]['id']);
                           setState(() {});
                         },
-                        icon: const Icon(Icons.delete))
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.red,
+                        ))
                   ],
                 ),
               ),
